@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="./img/jellyfish.png" />
+    <title>vanilla acnh</title>
+    <script src="./components/artifact-card.js"></script>
+    <script src="./components/fossil-card.js"></script>
+    <style>
+      html, body {
+        box-sizing: border-box;
+        margin: 0 auto;
+        padding: 0;
+        font-family: sans-serif;
+        font-size: 13px;
+      }
+
+      html {
+        background: url("./img/leaves.jpg") #fafafa fixed;
+      }
+
+      select, button {
+        cursor: pointer;
+      }
+
+      a {
+        color: #327A93;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      #jump-top {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        display: block;
+        background: #525252;
+        color: #e1e1e1;
+        padding: 5px 5px 0 5px;
+        border-radius: 5px;
+        cursor: pointer;
+        opacity: 0.25;
+        -webkit-transition: all 0.5s 0s ease;
+        -moz-transition: all 0.5s 0s ease;
+        -o-transition: all 0.5s 0s ease;
+        transition: all 0.5s 0s ease;
+      }
+
+      #jump-top:hover {
+        opacity: 1;
+        -webkit-transition: all 0.5s 0s ease;
+        -moz-transition: all 0.5s 0s ease;
+        -o-transition: all 0.5s 0s ease;
+        transition: all 0.5s 0s ease;
+      }
+
+      #intro-box {
+        margin: 3rem auto;
+        background: #fafafa;
+        padding: 1rem 2rem;
+        border-radius: 6px;
+        text-align: center;
+        width: 250px;
+        border: 1px solid #ddd;
+      }
+
+      #alert {
+        color: red;
+        font-size: 0.9rem;
+      }
+
+      #artifacts {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 350px);
+        grid-gap: 1.5rem;
+        align-items: baseline;
+        justify-content: center;
+      }
+
+      .fossil-section {
+        padding: 2rem 0;
+      }
+
+      #single-fossils {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 350px);
+        grid-gap: 1.5rem;
+        align-items: baseline;
+        justify-content: center;
+        position: relative;
+      }
+
+      #single-fossils::before {
+        content: "Single Fossils";
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        display: block;
+        font-weight: bold;
+      }
+
+      #multi-fossils {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 500px);
+        grid-gap: 1.5rem;
+        align-items: baseline;
+        justify-content: center;
+      }
+
+      #multi-fossils::before {
+        content: "Multi Fossils";
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        display: block;
+        font-weight: bold;
+      }
+
+      fossil-card[family~="Diplodocus"] {
+        grid-column: 1/-1;
+        grid-row: 1 / span 1;
+      }
+
+      fossil-card[type="multi"] {
+        grid-column: span 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="intro-box">
+      <div id="alert"></div>
+      <p><img src="./img/jellyfish.png" height="50"/></p>
+      <p>welcome to <a href="https://github.com/asterein" target="_blank">vanilla acnh</a>!</p>
+      <p>
+        a small frontend to the
+        <a href="https://github.com/alexislours/ACNHAPI" target="_blank">acnhapi</a>
+        by <a href="https://github.com/alexislours/" target="_blank">alexislours</a>
+        built in vanilla javascript with custom web components.
+      </p>
+      <div>
+        <select id="choice">
+          <option value="bugs">Bugs</option>
+          <option value="sea">Sea</option>
+          <option value="fish">Fish</option>
+          <option value="fossils">Fossils</option>
+          <option value="error">Error</option>
+        </select>
+        <button onclick="submitChoice()">Go</button>
+      </div>
+      <div id="count"></div>
+    </div>
+    <div id="artifacts"></div>
+    <div id="fossil-artifacts"></div>
+    <script>
+      const count = document.querySelector("#count");
+      const artifactWrapper = document.querySelector("#artifacts");
+      const fossilArtifactWrapper = document.querySelector("#fossil-artifacts");
+      const alert = document.querySelector("#alert");
+
+      function reset () {
+        count.innerHTML = "";
+        artifactWrapper.innerHTML = "";
+        fossilArtifactWrapper.innerHTML = "";
+      }
+
+      function resetAlert () {
+        alert.innerHTML = "";
+      }
+
+      function getArtifacts (type) {
+        reset();
+        fetch(`https://acnhapi.com/v1/${type}/`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (type === "fossils") {
+              let fossilFamilies = {};
+              for (let key in data) {
+                if (!Object.keys(fossilFamilies).includes(data[key]['part-of'])) {
+                  fossilFamilies[data[key]['part-of']] = [];
+                }
+
+                fossilFamilies[data[key]['part-of']].push(data[key]);
+              }
+
+              const singleFossils = document.createElement("div");
+              singleFossils.setAttribute("id", "single-fossils");
+              singleFossils.setAttribute("class", "fossil-section");
+              const multiFossils = document.createElement("div");
+              multiFossils.setAttribute("id", "multi-fossils");
+              multiFossils.setAttribute("class", "fossil-section");
+
+              fossilArtifactWrapper.appendChild(singleFossils);
+              fossilArtifactWrapper.appendChild(multiFossils);
+
+              let singleCount = 0;
+              let multiCount = 0;
+
+              for (let key in fossilFamilies) {
+                let fossil = document.createElement('fossil-card');
+                fossil.setAttribute("family", JSON.stringify(fossilFamilies[key]));
+                fossilFamilies[key].length === 1
+                  ? singleFossils.appendChild(fossil) && singleCount++
+                  : multiFossils.appendChild(fossil) && multiCount++
+              }
+
+              count.innerHTML = `
+                <p>There are ${singleCount} single fossils and ${multiCount} multi fossils. There are
+                ${Object.keys(data).length} individual fossils in total!</p>
+              `;
+            } else {
+              count.innerHTML = `
+                <p>There are ${Object.keys(data).length} ${type === "sea" ? "sea creatures" : type}!</p>
+              `;
+              for (let key in data) {
+                let artifact = document.createElement("artifact-card");
+                artifact.setAttribute("artifact", JSON.stringify(data[key]));
+                artifact.setAttribute("type", type);
+                artifactWrapper.appendChild(artifact);
+              }
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+            reset();
+            alert.innerHTML = "There was an issue loading the artifacts. Please try again!";
+          });
+      }
+
+      function submitChoice () {
+        resetAlert();
+        const choice = document.querySelector("#choice").value.toString();
+        getArtifacts(choice);
+      }
+
+      function scrollToTop () {
+        window.scrollTo({top: 0, behavior: "smooth"});
+      }
+    </script>
+    <span id="jump-top" onclick="scrollToTop()">^</span>
+  </body>
+</html>
